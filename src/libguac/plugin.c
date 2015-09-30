@@ -40,6 +40,7 @@ guac_client_plugin* guac_client_plugin_open(const char* protocol) {
 
     /* Client args description */
     const char** client_args;
+    const char*** client_args_ptr = NULL;
 
     /* Pluggable client */
     char protocol_lib[GUAC_PROTOCOL_LIBRARY_LIMIT] =
@@ -77,11 +78,15 @@ guac_client_plugin* guac_client_plugin_open(const char* protocol) {
     /* Get usage strig */
     client_args = (const char**) dlsym(client_plugin_handle, "GUAC_CLIENT_ARGS");
 
-    /* Fail if cannot find GUAC_CLIENT_ARGS */
     if (dlerror() != NULL) {
-        guac_error = GUAC_STATUS_INTERNAL_ERROR;
-        guac_error_message = dlerror();
-        return NULL;
+        client_args_ptr = (const char***) dlsym(client_plugin_handle, "GUAC_CLIENT_ARGS_PTR");
+
+        /* Fail if cannot find GUAC_CLIENT_ARGS or GUAC_CLIENT_ARGS_PTR */
+        if (dlerror() != NULL) {
+            guac_error = GUAC_STATUS_INTERNAL_ERROR;
+            guac_error_message = dlerror();
+            return NULL;
+        }
     }
 
     /* Allocate plugin */
@@ -95,7 +100,7 @@ guac_client_plugin* guac_client_plugin_open(const char* protocol) {
     /* Init and return plugin */
     plugin->__client_plugin_handle = client_plugin_handle;
     plugin->init_handler = alias.client_init;
-    plugin->args = client_args;
+    plugin->args = client_args ? client_args : *client_args_ptr;
     return plugin;
 
 }
